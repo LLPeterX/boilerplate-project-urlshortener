@@ -4,16 +4,17 @@ const cors = require('cors');
 const app = express();
 const fs = require('fs');
 const dns = require('dns');
-const urlFileName = __dirname + "/.url";
-// body-parser now is not requied
-//const bodyParser = require('body-parser');
 
-// Basic Configuration
+const urlFileName = `${process.cwd()}/.url`;
 const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use('/public', express.static(`${process.cwd()}/public`));
 app.use(express.urlencoded({ extended: false }));
+
+app.get("/.url", function(req, res) {
+  res.send(404, 'Not Found');
+});
 
 app.get('/', function (req, res) {
   res.sendFile(process.cwd() + '/views/index.html');
@@ -36,7 +37,6 @@ function readUrls() {
 }
 
 function saveUrls(obj) {
-  console.log(`saving to ${urlFileName}`, obj);
   fs.writeFileSync(urlFileName, JSON.stringify(obj));
 }
 
@@ -45,9 +45,10 @@ app.post("/api/shorturl/new", function (req, res) {
   // значение URL берем из запроса - req.body.url, проверяем через dns
   try {
     let inputURL = req.body.url;
-    console.log(req.body);
+    console.log('req body=',req.body);
     // случай, если указан "example.com", а не "http://example.com"
     // для http и https - разные короткие URL.
+    // если не указать http://, то URL() выдаст ошибку
     if (!/^https?/.test(inputURL)) {
       inputURL = "http://" + inputURL;
     }
@@ -55,16 +56,17 @@ app.post("/api/shorturl/new", function (req, res) {
     dns.resolve(urlObj.host, function (err, address) {
       if (err) {
         res.json({ error: 'invalid url' });
+      } else {
+        // получаем ранее сохраненные данные и добавляем новые
+        let urls = readUrls(); // при первом запросе будет null, т.к. файла еще нет
+        if (!urls) {
+          urls = {};
+        }
+        let shortURL = Object.values(urls).length ? Math.max(...Object.values(urls)) + 1 : 1;
+        urls[inputURL] = shortURL;
+        saveUrls(urls);
+        res.json({ original_url: inputURL, short_url: shortURL });
       }
-      // получаем сохраненные данные
-      let urls = readUrls(); // при первом запросе будет null, т.к. файла еще нет
-      if (!urls) {
-        urls = {};
-      }
-      let shortURL = Object.values(urls).length ? Math.max(...Object.values(urls)) + 1 : 1;
-      urls[inputURL] = shortURL;
-      saveUrls(urls);
-      res.json({ original_url: inputURL, short_url: shortURL });
     });
   } catch (e) {
     console.error('post error', e);
@@ -83,7 +85,7 @@ app.get("/api/shorturl/:url", function (req, res) {
     let urls = readUrls();
     // находим в объекте имя свойства, значение которого = url
     let u = Object.entries(urls).find(e => e[1] == url);
-    console.log('found ',u);
+    console.log('found ', u);
     if (!u) {
       throw new Error();
     }
