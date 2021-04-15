@@ -26,7 +26,7 @@ app.get('/api/hello', function (req, res) {
 });
 
 // connect to mongodb
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(process.env.DB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .catch(err => {
     console.error('Cannot connect to mongoDB', err);
   });
