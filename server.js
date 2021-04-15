@@ -44,10 +44,10 @@ const schema = new mongoose.Schema({
 const model = mongoose.model('ShortUrl', schema);
 
 // 
-app.post('/api/shorturl/new', function (req, res) {
+app.post('/api/shorturl', function (req, res) {
   let longUrl = req.body.url;
   if (!longUrl || longUrl.length < 2) {
-    return res.json({ error: 'invalid URL' });
+    return res.json({ error: 'invalid url'});
   }
   // check URL via dns lookup
   if (!/^https?/.test(longUrl)) {
